@@ -19,3 +19,4 @@ for (const [key, env] of Object.entries(map)) {
 }
 writeFileSync(file, src);
 console.log('Config de Firebase inyectada desde variables de entorno (no se sube al repo).');
+console.log('No commitees src/environments/environment.ts con estos valores: git restore src/environments/environment.ts');

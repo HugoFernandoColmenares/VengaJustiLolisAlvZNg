@@ -24,6 +24,11 @@ import { BACKEND } from './core/backend/backend';
     @if (backend.kind === 'local') {
       <p class="demo-bar" role="status">Modo demo: votos y posts se guardan solo en este navegador.</p>
     }
+    @if (backend.user(); as u) {
+      @if (!u.isAdmin && u.status !== 'approved') {
+        <p class="pending-bar" role="status">Tu cuenta está pendiente de aprobación. Puedes leer; votar sigue bloqueado.</p>
+      }
+    }
     <main id="contenido" tabindex="-1"><router-outlet /></main>
     <footer class="site-footer">
       <p class="copyright">© {{ year }} VengaJustiLolis Alv Z</p>
@@ -33,10 +38,11 @@ import { BACKEND } from './core/backend/backend';
   `,
   styles: `
     .site-header { position: sticky; top: 0; z-index: 1000; background: var(--c-yellow); border-bottom: var(--bw) solid var(--c-ink);
-      padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
-    .logo { text-decoration: none; font-family: var(--f-display); font-size: clamp(2.2rem, 6vw, 2.8rem); color: #fff; letter-spacing: .1rem;
+      padding: 1rem 1.2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    @media (min-width: 768px) { .site-header { padding: 1rem 2rem; } }
+    .logo { text-decoration: none; font-family: var(--f-display); font-size: clamp(1.7rem, 4.6vw, 2.8rem); color: #fff; letter-spacing: .06rem;
       text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; transform: skew(-5deg) rotate(-2deg);
-      transition: transform var(--bounce); white-space: nowrap; }
+      transition: transform var(--bounce); line-height: .9; min-width: 0; }
     .logo:hover { transform: scale(1.05) skew(-5deg); }
     .logo span { color: var(--c-blue); }
     .menu-toggle { background: #000; color: var(--c-yellow); border: 0; min-width: 4.8rem; min-height: 4.8rem; font-size: 2.4rem; border-radius: 4px; cursor: pointer; }
@@ -49,7 +55,9 @@ import { BACKEND } from './core/backend/backend';
       .menu-toggle { display: none; }
       .nav { display: flex; flex-direction: row; position: static; padding: 0; background: none; border: 0; }
     }
-    .demo-bar { margin: 0; line-height: 1.2; text-align: center; font-family: var(--f-retro); font-size: 1.8rem; background: #000; color: var(--c-yellow); padding: .2rem 1rem; }
+    .demo-bar, .pending-bar { margin: 0; line-height: 1.2; text-align: center; font-family: var(--f-retro); font-size: 1.8rem; padding: .4rem 1rem; overflow-wrap: anywhere; }
+    .demo-bar { background: #000; color: var(--c-yellow); }
+    .pending-bar { background: var(--c-pink); color: #fff; text-shadow: 1px 1px 0 #000; }
     main { display: block; min-height: 60vh; outline: none; }
     .site-footer { margin-top: 8rem; background: var(--c-dark); color: #fff; padding: 6rem 2rem 3rem; text-align: center; border-top: var(--bw) solid #000; position: relative; }
     .site-footer::before { content: 'FINISH!'; position: absolute; top: -3.5rem; left: 50%; transform: translateX(-50%) rotate(-2deg);
@@ -80,10 +88,7 @@ export class App {
   protected readonly year = new Date().getFullYear();
   protected readonly links = [
     { path: '/', label: 'Inicio' },
-    { path: '/premios/2025', label: 'Premios 2025' },
-    { path: '/votar', label: 'Votar' },
-    { path: '/lore', label: 'La Grieta' },
-    { path: '/personajes', label: 'Personajes' },
     { path: '/posts', label: 'Posts' },
+    { path: '/lore', label: 'Lore' },
   ];
 }

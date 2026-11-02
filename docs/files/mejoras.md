@@ -26,6 +26,12 @@ Derivada de [auditoria.md](auditoria.md). Cada ítem indica qué se hizo en la a
 19. **Verificado con Playwright + axe-core** en 320/375/768/1024/1440 px y 8 rutas: 0 px de scroll horizontal, 0 violaciones WCAG 2 A/AA de axe, 0 errores de consola, ninguna petición a dominios de terceros salvo Google Fonts. Capturas `new-*-phone/tablet/desktop.png`.
 20. **Credenciales fuera del repo**: `environment.ts` con valores vacíos; la config de Firebase se inyecta en el deploy desde secrets de GitHub Actions (`scripts/inject-firebase-env.mjs`); `.gitignore` cubre `.env*`, *service accounts*, `.pem`/`.key`.
 
+## Nav, premios dentro de posts y aprobación (esta rama)
+21. **Menú de tres ítems**: Inicio, Posts y Lore. Lore sigue siendo la página estática de la Grieta; Personajes sale del menú y se entra desde Lore.
+22. **Premios por año, dentro de un post.** `/votar` y `/premios/:año` redirigen a `/posts/premios-{año}`. 2026 vota o muestra resultados según `open`. 2025 reutiliza el bloque de resultados que ya estaba.
+23. **Aprobación manual.** Google crea `users/{uid}` en `pending`. Pendiente y rechazada ven la pantalla de espera y no votan. El admin aprueba, rechaza o revoca en `/admin`. Quien está en `admins/{uid}` cuenta como aprobada.
+24. **Reglas de Firestore** cubren `users` y exigen cuenta aprobada para votar. Se prueban con el emulador (`npm run test:rules`). No se despliegan al proyecto real desde CI.
+
 ## Pendientes (TODO)
 - [ ] Crear el proyecto Firebase, guardar su config como secrets del repo (no en `environment.ts`) y desplegar `firestore.rules` (ver [guia-arquitectura.md](guia-arquitectura.md)). *Requiere la conexión a Firebase.*
 - [ ] Agregar los UID de los admins en la colección `admins` desde la consola. *Requiere Firebase.*

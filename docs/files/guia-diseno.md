@@ -60,23 +60,25 @@ Borde `--bw: 3px`. Sombras: `--sh-sm` 3/3, `--sh` 6/6, `--sh-lg` 10/10 (hover).
 | Rango | Reglas |
 |---|---|
 | < 768 px | Una columna, sin inclinaciones, menú hamburguesa (≥48 px), CTA apilados |
-| 768–1023 px | Rejillas de 2 columnas, inclinaciones activas, aún menú hamburguesa (6 enlaces no caben) |
-| ≥ 1024 px | Menú horizontal |
+| 768–1023 px | Rejillas de 2 columnas, inclinaciones activas, aún menú hamburguesa |
+| ≥ 1024 px | Menú horizontal (Inicio, Posts, Lore) |
 | ≥ 1100 px | Personajes en 4 columnas, ganadores en 3 |
 Nunca debe existir scroll horizontal (verificado con Playwright a 360/768/1366/1920).
 
 ## Flujos UX
-**Votar**
-1. Inicio → "Votar Premios 2026" → `/votar`.
-2. Sin sesión: tarjeta "Iniciar sesión" (Google en producción; usuario de prueba en demo). Las opciones se ven pero están deshabilitadas.
-3. Por categoría: elegir un nominado (radio) → "Confirmar voto" (deshabilitado hasta elegir).
-4. Éxito: aviso verde "¡Voto registrado por X!" y la tarjeta cambia a "Ya votaste por X" + conteo parcial.
-5. Si ya había votado (otra pestaña/dispositivo): aviso rojo "Ya votaste en esta categoría este año." El voto no se puede cambiar.
+**Votar (dentro del post del año)**
+1. Inicio → "Votar Premios 2026" → `/posts/premios-2026`. `/votar` redirige al mismo post.
+2. Sin sesión: tarjeta para entrar (Google en producción; en demo, admin de prueba o cuenta pendiente).
+3. Cuenta pendiente o rechazada: pantalla "Tu cuenta está pendiente de aprobación". Puede leer el post; no vota.
+4. Por categoría abierta: elegir un nominado (radio) → "Confirmar voto" (deshabilitado hasta elegir).
+5. Éxito: aviso verde "¡Voto registrado por X!" y la tarjeta cambia a "Ya votaste por X" + conteo parcial.
+6. Si ya había votado: aviso rojo "Ya votaste en esta categoría este año." El voto no se puede cambiar.
+7. Categoría cerrada: caja amarilla con el resultado y el gráfico. No pide sesión.
 
 **Posts**
-1. `/posts`: lista cronológica (más nuevo primero) con fecha en formato es-CO, autor, extracto y "Leer más".
-2. `/posts/:id`: artículo con saltos de línea respetados y etiquetas.
-3. Admin: botón "+ Nuevo post" → `/admin` → formulario (título ≤140, contenido, etiquetas separadas por coma) → al publicar navega al post.
+1. `/posts`: lista cronológica (más nuevo primero) con fecha en formato es-CO, autor, extracto y "Leer más". El post de premios lleva la etiqueta "Premios {año}".
+2. `/posts/:id`: artículo con saltos de línea respetados, etiquetas y, si tiene año, la votación o los resultados.
+3. Admin: botón "+ Nuevo post" → `/admin`. Título ≤140, contenido, etiquetas, año de premios opcional y portada. Al publicar navega al post.
 
-**Admin de categorías**
-`/admin` → "Categoría 2026": título, descripción, nominados (uno por línea), orden → se crea abierta para votar.
+**Admin de categorías y usuarios**
+`/admin` → **Usuarios** (aprobar, rechazar, revocar) y "Categoría 2026": título, descripción, nominados (uno por línea), orden y si la votación sigue abierta. Cada categoría del año tiene un botón para abrirla o cerrarla.

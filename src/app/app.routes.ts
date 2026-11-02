@@ -1,10 +1,17 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, Routes } from '@angular/router';
+import { environment } from '../environments/environment';
+
+const contestRedirect = (year: string, fragment: string | null) => {
+  if (!/^\d{4}$/.test(year)) return '/posts';
+  return inject(Router).createUrlTree(['/posts', `premios-${year}`], { fragment: fragment ?? undefined });
+};
 
 export const routes: Routes = [
   { path: '', title: 'VengaJustiLolis Alv Z — Premios, lore y caos de la Grieta', loadComponent: () => import('./pages/home').then(m => m.HomePage) },
-  { path: 'premios/2025', title: 'Premios VJL 2025 — Resultados', loadComponent: () => import('./pages/awards-2025').then(m => m.Awards2025Page) },
-  { path: 'premios', pathMatch: 'full', redirectTo: 'premios/2025' },
-  { path: 'votar', title: 'Votar — Premios VJL', loadComponent: () => import('./pages/vote').then(m => m.VotePage) },
+  { path: 'premios', pathMatch: 'full', redirectTo: 'posts/premios-2025' },
+  { path: 'premios/:year', redirectTo: ({ params, fragment }) => contestRedirect(String(params['year'] ?? ''), fragment) },
+  { path: 'votar', pathMatch: 'full', redirectTo: ({ fragment }) => contestRedirect(String(environment.votingYear), fragment) },
   { path: 'lore', title: 'La Grieta — Lore de VengaJustiLolis', loadComponent: () => import('./pages/lore').then(m => m.LorePage) },
   { path: 'personajes', title: 'Personajes y facciones — VengaJustiLolis', loadComponent: () => import('./pages/characters').then(m => m.CharactersPage) },
   { path: 'posts', title: 'Posts — VengaJustiLolis', loadComponent: () => import('./pages/posts').then(m => m.PostsPage) },

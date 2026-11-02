@@ -4,7 +4,10 @@
 //   abrir o compartir esos enlaces responda 200 en vez de 404 (mejor para SEO y vistas previas).
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 const dir = 'dist/vengajusti/browser';
-const staticRoutes = ['premios', 'premios/2025', 'votar', 'lore', 'personajes', 'posts', 'admin'];
+const staticRoutes = [
+  'premios', 'premios/2025', 'premios/2026', 'votar', 'lore', 'personajes',
+  'posts', 'posts/premios-2025', 'posts/premios-2026', 'admin',
+];
 copyFileSync(`${dir}/index.html`, `${dir}/404.html`);
 for (const r of staticRoutes) {
   mkdirSync(`${dir}/${r}`, { recursive: true });

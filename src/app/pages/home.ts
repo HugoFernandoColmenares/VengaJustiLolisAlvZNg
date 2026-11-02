@@ -14,9 +14,9 @@ import { environment } from '../../environments/environment';
         <h1 class="hero__title">VengaJustiLolis <span>Alv Z</span></h1>
         <p class="hero__tag">{{ tagline }}</p>
         <div class="hero__cta">
-          <a class="btn btn--pink" routerLink="/votar">Votar Premios {{ votingYear }}</a>
-          <a class="btn" routerLink="/premios/2025">Ganadores 2025</a>
-          <a class="btn btn--blue" routerLink="/lore">Entrar a la Grieta</a>
+          <a class="btn btn--pink" [routerLink]="['/posts', 'premios-' + votingYear]">Votar Premios {{ votingYear }}</a>
+          <a class="btn" routerLink="/posts/premios-2025">Ganadores 2025</a>
+          <a class="btn btn--blue" routerLink="/lore">Entrar al lore</a>
         </div>
       </div>
     </section>
@@ -35,7 +35,7 @@ import { environment } from '../../environments/environment';
         <ul class="grid grid--3 winners">
           @for (c of awards; track c.id) {
             <li class="card winner">
-              <a [routerLink]="['/premios/2025']" [fragment]="c.id">
+              <a [routerLink]="['/posts', 'premios-2025']" [fragment]="c.id">
                 <span class="winner__cat">{{ c.title }}</span>
                 <span class="winner__name">{{ c.winner }}</span>
               </a>

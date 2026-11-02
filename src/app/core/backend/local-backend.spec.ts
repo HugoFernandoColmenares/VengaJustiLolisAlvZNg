@@ -40,4 +40,41 @@ describe('LocalBackend', () => {
     const [cat] = await b.listCategories(2026);
     await expect(b.castVote(2026, cat.id, 'x')).rejects.toThrow();
   });
+
+  it('una cuenta pendiente o rechazada no vota; al aprobarla, sí', async () => {
+    const b = new LocalBackend();
+    await b.signInPending!();
+    const [cat] = await b.listCategories(2026);
+    await expect(b.castVote(2026, cat.id, cat.nominees[0])).rejects.toThrow(/pendiente/);
+    await expect(b.listUsers()).rejects.toThrow(/admins/);
+    await b.signOut();
+    await b.signIn();
+    await b.setUserStatus('user-kevin', 'rejected');
+    await b.signOut();
+    await b.signInPending!();
+    await expect(b.castVote(2026, cat.id, cat.nominees[0])).rejects.toThrow(/pendiente/);
+    await b.signOut();
+    await b.signIn();
+    await b.setUserStatus('user-kevin', 'approved');
+    await b.signOut();
+    await b.signInPending!();
+    await b.castVote(2026, cat.id, cat.nominees[0]);
+    expect((await b.myVotes(2026))[cat.id]).toBe(cat.nominees[0]);
+  });
+
+  it('el admin se trata como aprobado y el post de premios conserva el id del año', async () => {
+    const b = new LocalBackend();
+    await b.signIn();
+    expect(b.user()?.status).toBe('approved');
+    const id = await b.createPost({ title: 'Premios VengaJusti 2026', body: 'texto', tags: ['premios'], contestYear: 2026 });
+    expect(id).toBe('premios-2026');
+    const again = await b.createPost({ title: 'Actualizado', body: 'nuevo', tags: [], contestYear: 2026 });
+    expect(again).toBe(id);
+    expect((await b.getPost(id))?.title).toBe('Actualizado');
+    expect((await b.listPosts()).filter(p => p.id === id)).toHaveLength(1);
+    const names = (await b.listUsers()).map(u => u.displayName);
+    expect(names).toContain('Kevin');
+    await b.setUserStatus('user-ralex', 'approved');
+    expect((await b.listUsers()).find(u => u.uid === 'user-ralex')?.approvedBy).toBe('demo-user');
+  });
 });

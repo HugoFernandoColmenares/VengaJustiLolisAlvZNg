@@ -6,6 +6,7 @@
 | Framework | Angular 22.2 (componentes standalone, signals, `resource()`, control flow `@if/@for`, rutas lazy, zoneless) |
 | Estilos | SCSS: tokens globales en `src/styles.scss` + estilos por componente |
 | Backend (BaaS) | Firebase: Firestore + Firebase Auth (Google), plan **Spark** (gratis) |
+| Imágenes | Supabase Storage, bucket público `vengajusti` (Firebase Storage exige Blaze). Ver [imagenes-supabase.md](imagenes-supabase.md) |
 | Modo sin credenciales | `LocalBackend` sobre `localStorage` |
 | Pruebas | Vitest (builder `@angular/build:unit-test`) |
 | Hosting | GitHub Pages en `/VengaJustiLolisAlvZNg/` con GitHub Actions |
@@ -20,12 +21,14 @@
 ├─ legacy/lore/            sitio original de lore (copia de FeithNoir/vengajustilolisalvz)
 ├─ public/                 favicon, og-image.png (se copian tal cual)
 ├─ scripts/                spa-404.mjs (crea 404.html y .nojekyll), serve-dist.mjs (sirve el build como Pages)
-├─ src/environments/       environment.ts (config de Firebase VACÍA en el repo, se inyecta en el deploy + año de votación)
+├─ supabase/               config.toml (verify_jwt = false) y functions/vengajusti-upload (subida de imágenes)
+├─ src/environments/       environment.ts (config de Firebase VACÍA en el repo, se inyecta en el deploy + año de votación + URL de la función)
 ├─ src/app/
 │  ├─ app.ts / app.routes.ts / app.config.ts
 │  ├─ core/backend/        backend.ts (interfaz + token), local-backend.ts, firebase-backend.ts, backend.provider.ts, models.ts
-│  ├─ core/data/           lore.data.ts (lore de B), awards-2025.data.ts (resultados de A)
-│  ├─ shared/bar-chart.ts  gráfico de barras accesible
+│  ├─ core/data/           lore.data.ts, awards-2025.data.ts, image-optimize.data.ts (preset WebP)
+│  ├─ core/services/media/ optimización en canvas y subida a la Edge Function
+│  ├─ shared/              bar-chart.ts, image-field.ts (campo de subida del admin)
 │  └─ pages/               home, awards-2025, vote, lore, characters, posts, post-detail, admin, not-found
 ├─ firestore.rules · firestore.indexes.json · firebase.json
 ```
@@ -43,7 +46,7 @@
 | `**` | 404 temático |
 
 ## ¿Por qué Firebase y no otra cosa?
-Requisitos: gratis, sin servidor propio (GitHub Pages es estático), login sencillo para gente de un grupo de WhatsApp, reglas que garanticen "un voto por persona", **sin Supabase**.
+Requisitos: gratis, sin servidor propio (GitHub Pages es estático), login sencillo para gente de un grupo de WhatsApp, reglas que garanticen "un voto por persona". Los datos y el login siguen en Firebase. Las imágenes no: Firebase Storage exige el plan Blaze, así que van a Supabase Storage ([imagenes-supabase.md](imagenes-supabase.md)). No se usa Supabase Auth.
 
 | Opción | Pros | Contras |
 |---|---|---|
@@ -65,10 +68,10 @@ Los componentes solo inyectan `BACKEND`; nunca importan Firebase.
 | Colección | Id del documento | Campos | Quién escribe |
 |---|---|---|---|
 | `admins` | `{uid}` | (vacío o `{ name }`) | Solo consola de Firebase |
-| `categories` | `{year}_{slug}` | `year:int, slug, title, description, nominees:string[], open:bool, order:int` | Admins |
+| `categories` | `{year}_{slug}` | `year:int, slug, title, description, nominees:string[], open:bool, order:int`, opcionales `image` (URL) y `nomineeImages: { name, image }[]` | Admins |
 | `votes` | `{year}_{categoryId}_{uid}` | `year, categoryId, uid, nominee, createdAt` | Cada usuario, una vez |
 | `tallies` | `{year}_{categoryId}` | `year, categoryId, counts: { [nominado]: int }` | En la misma transacción del voto (+1) |
-| `posts` | auto | `title, body, tags[], authorUid, authorName, createdAt:number` | Admins |
+| `posts` | auto | `title, body, tags[], authorUid, authorName, createdAt:number`, opcional `image` (URL) | Admins |
 
 `users` no existe como colección: el perfil (nombre, email) viene de Firebase Auth y el rol admin de `admins/{uid}`.
 
@@ -79,7 +82,7 @@ Los componentes solo inyectan `BACKEND`; nunca importan Firebase.
 - El nominado debe estar en `categories/{year}_{categoryId}.nominees` y la categoría debe tener `open == true`.
 - `tallies`: solo se puede sumar 1 al nominado del voto recién creado, en la misma transacción.
 - `categories` y `posts`: lectura pública; escritura solo si existe `admins/{auth.uid}`.
-- `admins`: no se escribe desde el cliente.
+- `admins`: cada usuario autenticado lee solo su propio documento (la Edge Function de imágenes usa esa lectura con el ID token). No se escribe desde el cliente.
 
 Probar las reglas: `npx firebase-tools emulators:start --only firestore` y apuntar la app al emulador (TODO: script dedicado).
 

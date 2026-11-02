@@ -18,6 +18,7 @@ Este repo fusiona dos sitios anteriores de [FeithNoir](https://github.com/FeithN
 ## Stack
 - **Angular 22** (standalone, signals, `resource()`, `@if/@for`, rutas lazy, zoneless) + SCSS
 - **Firebase** (Firestore + Auth con Google, plan Spark gratis) detrás de una interfaz; sin credenciales funciona en **modo demo** con `localStorage`
+- **Imágenes** en Supabase Storage (el plan Spark no incluye Firebase Storage). Solo admins suben, por una Edge Function
 - **Vitest** para pruebas · **GitHub Actions** + **GitHub Pages** para publicar
 - Node **24** (Angular 22 requiere `^22.22.3`, `^24.15` o `>=26`)
 
@@ -60,7 +61,20 @@ Requisito único: **Settings → Pages → Source: GitHub Actions**. Los PR corr
 
 Paso a paso completo en la [guía de arquitectura](docs/files/guia-arquitectura.md#crear-el-proyecto-firebase-paso-a-paso). No se suben secretos: la config web de Firebase no es secreta (la seguridad la dan [`firestore.rules`](firestore.rules)), pero igual se mantiene fuera del repo; `.env*` y archivos de *service account* están en `.gitignore`.
 
+## Imágenes (Supabase Storage)
+
+Firebase Storage pide plan Blaze, así que las fotos de posts, categorías y nominados van al bucket público `vengajusti` del proyecto Supabase de feith-blog. El navegador las convierte a WebP (máx. 1920×1080) y una Edge Function, autorizada con el ID token de Firebase, las escribe con el service role. En modo demo el campo de subida queda deshabilitado.
+
+La función **no se despliega** con este repo. Cuando toque publicarla:
+
+```bash
+supabase functions deploy vengajusti-upload --no-verify-jwt --project-ref ebhxbmtmrayolmlkdsom
+```
+
+Detalle de arquitectura, límites (1 GB en el plan gratis) y seguridad: [docs/files/imagenes-supabase.md](docs/files/imagenes-supabase.md).
+
 ## Documentación
+- [Imágenes en Supabase Storage](docs/files/imagenes-supabase.md)
 - [Auditoría de los sitios originales](docs/files/auditoria.md)
 - [Lista de mejoras](docs/files/mejoras.md)
 - [Guía de arquitectura](docs/files/guia-arquitectura.md) — stack, carpetas, BaaS, modelo de datos, reglas, deploy

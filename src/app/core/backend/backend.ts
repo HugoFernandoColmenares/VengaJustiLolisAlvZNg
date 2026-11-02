@@ -10,6 +10,8 @@ export interface Backend {
   readonly user: Signal<AppUser | null>;
   signIn(): Promise<void>;
   signOut(): Promise<void>;
+  /** ID token de Firebase. `forceRefresh` llama a `getIdToken(true)`. En modo demo lanza. */
+  getIdToken(forceRefresh?: boolean): Promise<string>;
 
   listCategories(year: number): Promise<Category[]>;
   saveCategory(cat: Omit<Category, 'id'> & { id?: string }): Promise<void>;
@@ -21,7 +23,7 @@ export interface Backend {
 
   listPosts(): Promise<Post[]>;
   getPost(id: string): Promise<Post | null>;
-  createPost(p: { title: string; body: string; tags: string[] }): Promise<string>;
+  createPost(p: { title: string; body: string; tags: string[]; image?: string | null }): Promise<string>;
 }
 
 export const BACKEND = new InjectionToken<Backend>('BACKEND');

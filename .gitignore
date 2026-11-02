@@ -58,3 +58,7 @@ serviceAccount*.json
 firebase-debug.log
 firestore-debug.log
 .runtimeconfig.json
+
+# CLI de Supabase (estado local; la función sí se versiona)
+supabase/.temp/
+supabase/.branches/

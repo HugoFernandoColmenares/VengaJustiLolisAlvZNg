@@ -1,0 +1,8 @@
+# La función recibe un ID token de Firebase, no un JWT de Supabase.
+# El gateway no debe verificar ese header: la función lo valida con las claves de Google.
+# Desplegar (desde la raíz de este repo):
+#   supabase functions deploy vengajusti-upload --no-verify-jwt --project-ref ebhxbmtmrayolmlkdsom
+# El flag y esta sección dicen lo mismo; el flag gana si el CLI no lee este archivo.
+
+[functions.vengajusti-upload]
+verify_jwt = false

@@ -18,4 +18,9 @@ export const environment = {
   },
   /** Año de la votación abierta actualmente. */
   votingYear: 2026,
+  /**
+   * Edge Function pública de subida. No es un secreto: solo el service role (dentro de la función) escribe.
+   * Ver docs/files/imagenes-supabase.md.
+   */
+  imageUploadUrl: 'https://ebhxbmtmrayolmlkdsom.supabase.co/functions/v1/vengajusti-upload',
 };

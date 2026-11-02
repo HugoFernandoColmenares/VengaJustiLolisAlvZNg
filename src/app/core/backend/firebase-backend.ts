@@ -34,6 +34,11 @@ export class FirebaseBackend implements Backend {
 
   async signIn() { await signInWithPopup(this.auth, new GoogleAuthProvider()); }
   async signOut() { await signOut(this.auth); }
+  async getIdToken(forceRefresh = false) {
+    const current = this.auth.currentUser;
+    if (!current) throw new Error('Inicia sesión primero.');
+    return current.getIdToken(forceRefresh);
+  }
 
   async listCategories(year: number) {
     const s = await getDocs(query(collection(this.db, 'categories'), where('year', '==', year)));
@@ -78,9 +83,13 @@ export class FirebaseBackend implements Backend {
     const d = await getDoc(doc(this.db, 'posts', id));
     return d.exists() ? ({ ...(d.data() as Omit<Post, 'id'>), id: d.id }) : null;
   }
-  async createPost(p: { title: string; body: string; tags: string[] }) {
+  async createPost(p: { title: string; body: string; tags: string[]; image?: string | null }) {
     const u = this.user(); if (!u) throw new Error('Inicia sesión primero.');
-    const r = await addDoc(collection(this.db, 'posts'), { ...p, authorUid: u.uid, authorName: u.displayName, createdAt: Date.now() });
+    const { image, ...rest } = p;
+    const r = await addDoc(collection(this.db, 'posts'), {
+      ...rest, authorUid: u.uid, authorName: u.displayName, createdAt: Date.now(),
+      ...(image ? { image } : {}),
+    });
     return r.id;
   }
 }

@@ -40,6 +40,7 @@ export class LocalBackend implements Backend {
     this.db.user = u; this.user.set(u); this.save();
   }
   async signOut() { this.db.user = null; this.user.set(null); this.save(); }
+  async getIdToken(): Promise<string> { throw new Error('Modo demo: no hay token de Firebase.'); }
 
   async listCategories(y: number) { return this.db.categories.filter(c => c.year === y).sort((a, b) => a.order - b.order); }
   async saveCategory(c: Omit<Category, 'id'> & { id?: string }) {
@@ -69,10 +70,11 @@ export class LocalBackend implements Backend {
 
   async listPosts() { return [...this.db.posts].sort((a, b) => b.createdAt - a.createdAt); }
   async getPost(id: string) { return this.db.posts.find(p => p.id === id) ?? null; }
-  async createPost(p: { title: string; body: string; tags: string[] }) {
+  async createPost(p: { title: string; body: string; tags: string[]; image?: string | null }) {
     const u = this.requireAdmin();
     const id = `${slug(p.title)}-${Date.now().toString(36)}`;
-    this.db.posts.push({ ...p, id, authorUid: u.uid, authorName: u.displayName, createdAt: Date.now() });
+    const { image, ...rest } = p;
+    this.db.posts.push({ ...rest, ...(image ? { image } : {}), id, authorUid: u.uid, authorName: u.displayName, createdAt: Date.now() });
     this.save();
     return id;
   }

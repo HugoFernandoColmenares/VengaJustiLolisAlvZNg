@@ -25,6 +25,34 @@ export interface Post {
   id: string; title: string; body: string; authorUid: string; authorName: string; createdAt: number; tags: string[];
   /** URL pública de la portada (Supabase Storage). */
   image?: string | null;
+  /**
+   * Si viene, este post es el de premios de ese año: muestra la votación mientras
+   * haya categorías abiertas y los resultados cuando se cierran.
+   * El id estable es `premios-{año}` (rutas viejas redirigen ahí).
+   */
+  contestYear?: number | null;
 }
 
-export interface AppUser { uid: string; displayName: string; email: string | null; isAdmin: boolean }
+export type AccountStatus = 'pending' | 'approved' | 'rejected';
+
+/** Documento `users/{uid}`. El alta la hace el propio usuario; el estado solo lo cambia un admin. */
+export interface UserAccount {
+  uid: string;
+  email: string | null;
+  displayName: string;
+  photoURL: string | null;
+  status: AccountStatus;
+  createdAt: number;
+  approvedAt: number | null;
+  approvedBy: string | null;
+}
+
+export interface AppUser {
+  uid: string;
+  displayName: string;
+  email: string | null;
+  photoURL: string | null;
+  isAdmin: boolean;
+  /** Quien tiene doc en `admins/{uid}` se trata como `approved`. */
+  status: AccountStatus;
+}

@@ -19,6 +19,7 @@ import { httpsImageUrl } from '../core/data/image-optimize.data';
             <a class="post" [routerLink]="['/posts', p.id]">
               @if (cover(p.image); as src) { <img class="thumb" [src]="src" alt=""> }
               <span class="meta">{{ p.createdAt | date: 'longDate' }} · {{ p.authorName }}</span>
+              @if (p.contestYear) { <span class="badge">Premios {{ p.contestYear }}</span> }
               <h2>{{ p.title }}</h2>
               <p>{{ p.body.length > 180 ? p.body.slice(0, 180) + '…' : p.body }}</p>
               <span class="more">Leer más →</span>

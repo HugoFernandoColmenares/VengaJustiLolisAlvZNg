@@ -8,9 +8,8 @@ const AVATAR = ['#FFCC00', '#00BFFF', '#EC4899', '#22C55E', '#CC65FE', '#FF9F40'
   selector: 'app-awards-2025',
   imports: [BarChart],
   template: `
-    <div class="container page stack">
-      <h1 class="page-title">¡Premios VJL 2025!</h1>
-      <nav aria-label="Categorías" class="jump">
+    <div class="stack">
+      <nav aria-label="Categorías 2025" class="jump">
         @for (c of awards; track c.id) { <a class="btn" [href]="'#' + c.id" (click)="go($event, c.id)">{{ c.title }}</a> }
       </nav>
 

@@ -2,10 +2,10 @@
 
 Sitio oficial del grupo **VengaJustiLolis Alv Z**: un chat de WhatsApp que se volvió partida de rol y luego metaficción compartida. Reúne en un solo lugar:
 
-- 🏆 **Premios VJL**: resultados 2025 con gráficos accesibles y "La voz del pueblo".
-- 🗳️ **Votación anual**: un voto por persona, por categoría y por año.
-- 📝 **Posts** del grupo (solo admins publican).
-- 🌪️ **Lore**: la Grieta, Ralexa, Noira, el Big Onii-chan, las facciones y Ciudad Nueva McOndo.
+- 📝 **Posts** del grupo (solo admins publican). Cada año de premios es un post (`Premios VengaJusti 2026`): votación mientras esté abierta y resultados al cerrar.
+- 🏆 **Premios 2025**: el post del año muestra los resultados, los gráficos y "La voz del pueblo".
+- 🗳️ **Votación**: un voto por persona, por categoría y por año. Hay que tener la cuenta aprobada.
+- 🌪️ **Lore**: la Grieta, Ralexa, Noira, el Big Onii-chan, las facciones y Ciudad Nueva McOndo (página estática; el elenco sigue en `/personajes`).
 
 Sitio publicado: https://hugofernandocolmenares.github.io/VengaJustiLolisAlvZNg/
 
@@ -27,6 +27,7 @@ Este repo fusiona dos sitios anteriores de [FeithNoir](https://github.com/FeithN
 npm ci
 npm start            # http://localhost:4200
 npm test -- --watch=false
+npm run test:rules   # emulador de Firestore; no toca el proyecto real
 ```
 
 ## Build
@@ -56,8 +57,8 @@ Requisito único: **Settings → Pages → Source: GitHub Actions**. Los PR corr
 ## Configurar Firebase
 1. Crea un proyecto en la consola de Firebase (plan Spark), activa Firestore y Authentication → Google, y agrega `hugofernandocolmenares.github.io` a los dominios autorizados.
 2. Registra una app web y guarda los valores de su `firebaseConfig` como **secrets del repo** (`FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`). El workflow de deploy los inyecta en el build. En tu PC usa `.env` y `npm run env:local` (ver arriba). [`src/environments/environment.ts`](src/environments/environment.ts) queda **vacío en el repo** y, sin `apiKey`, la app usa el modo demo. **No lo commitees con valores reales.**
-3. `npx firebase-tools deploy --only firestore:rules,firestore:indexes`
-4. Crea `admins/{tuUID}` en Firestore para tener permisos de admin.
+3. Cuando termines de revisar [`firestore.rules`](firestore.rules), publícalas a mano (este repo no las despliega): `npx firebase-tools deploy --only firestore:rules,firestore:indexes` contra `vengajustilolisalvz`. El índice `votes (uid ASC, year ASC)` no cambia.
+4. Crea `admins/{tuUID}` en Firestore para tener permisos de admin. Hoy el admin es `dragonscuro@gmail.com` (`KSYfIlDs4BXmIUyQq1r4zbIk3a52`). Las otras cuentas quedan en `users/{uid}` con estado `pending` hasta que un admin las apruebe en `/admin`.
 
 Paso a paso completo en la [guía de arquitectura](docs/files/guia-arquitectura.md#crear-el-proyecto-firebase-paso-a-paso). No se suben secretos: la config web de Firebase no es secreta (la seguridad la dan [`firestore.rules`](firestore.rules)), pero igual se mantiene fuera del repo; `.env*` y archivos de *service account* están en `.gitignore`.
 

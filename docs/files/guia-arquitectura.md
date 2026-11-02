@@ -28,21 +28,25 @@
 │  ├─ core/backend/        backend.ts (interfaz + token), local-backend.ts, firebase-backend.ts, backend.provider.ts, models.ts
 │  ├─ core/data/           lore.data.ts, awards-2025.data.ts, image-optimize.data.ts (preset WebP)
 │  ├─ core/services/media/ optimización en canvas y subida a la Edge Function
-│  ├─ shared/              bar-chart.ts, image-field.ts (campo de subida del admin)
-│  └─ pages/               home, awards-2025, vote, lore, characters, posts, post-detail, admin, not-found
+│  ├─ shared/              bar-chart.ts, image-field.ts, year-contest.ts (votación/resultados), pending-account.ts
+│  └─ pages/               home, awards-2025 (se incrusta en el post 2025), lore, characters, posts, post-detail, admin, not-found
 ├─ firestore.rules · firestore.indexes.json · firebase.json
 ```
 
 ## Rutas
+El menú solo tiene **Inicio**, **Posts** y **Lore**. Lore ya existía como página estática (`lore.data.ts`: sinopsis, cómo se juega, Ciudad Nueva McOndo). No se volvió una colección: ese texto es el canon del grupo, no se edita como un post. El elenco sigue en `/personajes`, enlazado desde Lore.
+
 | Ruta | Contenido |
 |---|---|
-| `/` | Hero, intro 2025, accesos a ganadores |
-| `/premios/2025` | Resultados 2025, gráficos y "La voz del pueblo" |
-| `/votar` | Votación del año `environment.votingYear` |
+| `/` | Hero, intro 2025, accesos a los posts de premios |
+| `/posts`, `/posts/:id` | Posts del grupo. Si el post tiene `contestYear`, muestra la votación o los resultados de ese año |
+| `/posts/premios-2025` | Post del año 2025: resultados, gráficos y "La voz del pueblo" |
+| `/posts/premios-2026` | Post del año en curso (`environment.votingYear`): categorías abiertas se votan; las cerradas muestran el conteo |
+| `/votar` | Redirige a `/posts/premios-{votingYear}` |
+| `/premios` y `/premios/:año` | Redirigen a `/posts/premios-:año` (`/premios` cae en 2025) |
 | `/lore` | Sinopsis, gameplay, Ciudad Nueva McOndo |
-| `/personajes` | Elenco y facciones |
-| `/posts`, `/posts/:id` | Posts del grupo |
-| `/admin` | Crear posts y categorías (solo admins) |
+| `/personajes` | Elenco y facciones (fuera del menú) |
+| `/admin` | Posts, categorías y **Usuarios** (aprobar, rechazar, revocar) |
 | `**` | 404 temático |
 
 ## ¿Por qué Firebase y no otra cosa?
@@ -60,7 +64,7 @@ Conclusión: Firebase es la opción gratuita con menos piezas móviles para este
 ## Capa de backend (desacoplada)
 `src/app/core/backend/backend.ts` define la interfaz `Backend` y el token `BACKEND`. `provideBackend()`:
 1. Si `environment.firebase.apiKey` tiene valor → importa **de forma diferida** `firebase-backend.ts` (chunk aparte de ~147 KB gzip que solo se descarga si hay config).
-2. Si no → `LocalBackend` (todo en `localStorage`, el usuario demo es admin para poder probar todo). La app muestra la barra "Modo demo".
+2. Si no → `LocalBackend` (todo en `localStorage`). "Entrar como admin de prueba" es admin aprobado; "Entrar como cuenta pendiente" entra como Kevin, que empieza en `pending`. La app muestra la barra "Modo demo".
 
 Los componentes solo inyectan `BACKEND`; nunca importan Firebase.
 
@@ -68,23 +72,37 @@ Los componentes solo inyectan `BACKEND`; nunca importan Firebase.
 | Colección | Id del documento | Campos | Quién escribe |
 |---|---|---|---|
 | `admins` | `{uid}` | (vacío o `{ name }`) | Solo consola de Firebase |
+| `users` | `{uid}` | `email, displayName, photoURL, status: pending\|approved\|rejected, createdAt, approvedAt, approvedBy` | El usuario crea el suyo en `pending`; solo un admin cambia `status`, `approvedAt` y `approvedBy` |
 | `categories` | `{year}_{slug}` | `year:int, slug, title, description, nominees:string[], open:bool, order:int`, opcionales `image` (URL) y `nomineeImages: { name, image }[]` | Admins |
-| `votes` | `{year}_{categoryId}_{uid}` | `year, categoryId, uid, nominee, createdAt` | Cada usuario, una vez |
-| `tallies` | `{year}_{categoryId}` | `year, categoryId, counts: { [nominado]: int }` | En la misma transacción del voto (+1) |
-| `posts` | auto | `title, body, tags[], authorUid, authorName, createdAt:number`, opcional `image` (URL) | Admins |
+| `votes` | `{year}_{categoryId}_{uid}` | `year, categoryId, uid, nominee, createdAt` | Usuario aprobado (o admin), una vez. Índice compuesto `uid ASC, year ASC` |
+| `tallies` | `{year}_{categoryId}` | `year, categoryId, counts: { [nominado]: int }` | En la misma transacción del voto (+1), solo si la cuenta puede votar |
+| `posts` | auto, o `premios-{año}` | `title, body, tags[], authorUid, authorName, createdAt:number`, opcionales `image` (URL) y `contestYear:int` | Admins |
 
-`users` no existe como colección: el perfil (nombre, email) viene de Firebase Auth y el rol admin de `admins/{uid}`.
+No hay colección de comentarios. La única escritura de una cuenta que todavía no está aprobada es crear su propio `users/{uid}` en `pending`. Votar (y el +1 del conteo) exige `approved` o ser admin.
+
+**Cuentas que ya existen.** Al iniciar sesión, si no hay `users/{uid}`, la app lo crea en `pending`. Así las 3 cuentas actuales quedan pendientes en el próximo ingreso. Quien tiene documento en `admins/{uid}` se trata como aprobada aunque el doc de `users` diga otra cosa. Hoy el admin de la consola es `dragonscuro@gmail.com`, uid `KSYfIlDs4BXmIUyQq1r4zbIk3a52`. Ese doc no se crea desde la app.
+
+**Post de premios.** El admin publica un post con el año (id fijo `premios-2026`, campo `contestYear`). Ese post lista las categorías de ese año: si `open` es true, la UI de voto; si es false, el resultado con el gráfico. 2025 no está en Firestore: el post `premios-2025` reutiliza el bloque estático de `awards-2025.data.ts` (ganadores, gráficos y la voz del pueblo).
 
 **Por qué `tallies`:** los votos son privados (cada quien solo lee el suyo), pero los conteos son públicos. El voto y el +1 se escriben en una transacción; las reglas comprueban con `existsAfter/getAfter` que el +1 corresponde a un voto nuevo del mismo usuario.
 
 ## Reglas de seguridad (resumen de `firestore.rules`)
+Estas reglas **no se despliegan** desde GitHub Actions ni desde este cambio. Hay que publicarlas a mano, contra `vengajustilolisalvz`, después de revisarlas:
+
+```bash
+npx firebase-tools deploy --only firestore:rules,firestore:indexes
+```
+
 - **Un voto por usuario, categoría y año:** el id del voto debe ser exactamente `{year}_{categoryId}_{auth.uid}`; `create` solo si el documento no existe (Firestore trata una segunda escritura como `update`, que está prohibido). El voto no se puede editar ni borrar.
 - El nominado debe estar en `categories/{year}_{categoryId}.nominees` y la categoría debe tener `open == true`.
+- **Votar y sumar el conteo exige cuenta aprobada** (`users/{uid}.status == 'approved'`) **o admin**. Una cuenta pendiente o rechazada no escribe votos ni tallies.
 - `tallies`: solo se puede sumar 1 al nominado del voto recién creado, en la misma transacción.
-- `categories` y `posts`: lectura pública; escritura solo si existe `admins/{auth.uid}`.
+- `users`: cada quien crea solo su doc, con `status == 'pending'` y `approvedAt`/`approvedBy` en null, y el email tiene que coincidir con el token. No puede cambiar el estado. `get` del propio doc; `list` solo admins. El admin actualiza únicamente `status`, `approvedAt` y `approvedBy`.
+- `categories` y `posts`: lectura pública; escritura solo si existe `admins/{auth.uid}`. En un post, `contestYear` si viene es un entero.
 - `admins`: cada usuario autenticado lee solo su propio documento (la Edge Function de imágenes usa esa lectura con el ID token). No se escribe desde el cliente.
+- Cualquier otra colección (comentarios incluidos) queda negada.
 
-Probar las reglas: `npx firebase-tools emulators:start --only firestore` y apuntar la app al emulador (TODO: script dedicado).
+Pruebas con el emulador, sin tocar el proyecto real: `npm run test:rules` (`firestore.rules.spec.ts`, `@firebase/rules-unit-testing`, proyecto `demo-vengajusti`).
 
 ## Crear el proyecto Firebase (paso a paso)
 1. Entra a https://console.firebase.google.com con tu cuenta de Google → **Agregar proyecto** → nombre `vengajusti` → puedes desactivar Google Analytics. El plan por defecto es **Spark** (gratis); no agregues tarjeta.
@@ -102,9 +120,9 @@ Probar las reglas: `npx firebase-tools emulators:start --only firestore` y apunt
    npx firebase-tools use --add        # elige el proyecto
    npx firebase-tools deploy --only firestore:rules,firestore:indexes
    ```
-8. Entra a la app, inicia sesión con Google una vez, y en **Authentication → Usuarios** copia tu UID. En **Firestore → Iniciar colección** crea `admins` con un documento cuyo id sea ese UID (campo opcional `name: "Feith Noir"`).
-9. Ya como admin, ve a `/admin` y crea las categorías del año con sus nominados.
-10. Commit + push a `main` → el workflow publica en Pages.
+8. En **Firestore → Iniciar colección** crea `admins` con el documento `KSYfIlDs4BXmIUyQq1r4zbIk3a52` (cuenta `dragonscuro@gmail.com`; campo opcional `name`). La app no escribe esa colección.
+9. Ya como admin, ve a `/admin`: crea las categorías del año, publica el post de premios con el año (queda en `/posts/premios-2026`) y, en **Usuarios**, aprueba a quien corresponda. Las cuentas que ya existen entran en `pending` la primera vez que vuelven a iniciar sesión.
+10. Commit + push a `main` → el workflow publica en Pages. **No** publica las reglas.
 
 ## Flujo de despliegue
 1. `push` a `main` (o *Run workflow* manual) dispara `.github/workflows/deploy.yml`.
@@ -119,6 +137,7 @@ En los PR corre `ci.yml` (tests + build) sin desplegar.
 npm ci
 npm start              # dev server en http://localhost:4200
 npm test -- --watch=false
+npm run test:rules     # emulador Firestore; no despliega reglas
 npm run build          # build de producción + 404.html
 npm run serve:dist     # sirve el build en http://localhost:4300/VengaJustiLolisAlvZNg/
 ```

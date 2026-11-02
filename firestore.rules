@@ -1,15 +1,69 @@
 rules_version = '2';
-// Reglas de VengaJusti (plan Spark). Desplegar con: firebase deploy --only firestore:rules
+// Reglas de VengaJusti (plan Spark, proyecto vengajustilolisalvz).
+// No las despliega CI. Después de revisarlas:
+//   firebase deploy --only firestore:rules,firestore:indexes
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    // Admin (doc en admins/{uid}) o users/{uid}.status == 'approved'.
+    // Si el doc no existe, get() falla y la regla niega: queda cerrado.
+    function isApproved() {
+      return isAdmin() || (
+        signedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
+      );
+    }
     function votePath(id) { return /databases/$(database)/documents/votes/$(id); }
 
     // Lista de admins: solo se gestiona desde la consola de Firebase.
+    // Cada quien lee el propio doc (la Edge Function de imágenes usa esa lectura con el ID token).
     match /admins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;
+    }
+
+    // Cuentas. El usuario solo puede crear la suya en pending.
+    // No puede tocar status, approvedAt ni approvedBy. La lista completa es de admins.
+    match /users/{uid} {
+      function profileKeys() {
+        return request.resource.data.keys().hasOnly([
+          'email', 'displayName', 'photoURL', 'status', 'createdAt', 'approvedAt', 'approvedBy'
+        ]);
+      }
+      function emailOk() {
+        return (!('email' in request.auth.token) || request.auth.token.email == null)
+          ? request.resource.data.email == null
+          : request.resource.data.email == request.auth.token.email;
+      }
+      function photoOk() {
+        return (!('picture' in request.auth.token) || request.auth.token.picture == null)
+          ? request.resource.data.photoURL == null
+          : (request.resource.data.photoURL == null || request.resource.data.photoURL == request.auth.token.picture);
+      }
+
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && profileKeys()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.approvedAt == null
+        && request.resource.data.approvedBy == null
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 80
+        && request.resource.data.createdAt is int
+        && emailOk()
+        && photoOk();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvedAt', 'approvedBy'])
+        && request.resource.data.status in ['pending', 'approved', 'rejected']
+        && (request.resource.data.approvedAt == null || request.resource.data.approvedAt is int)
+        && (request.resource.data.approvedBy == null || request.resource.data.approvedBy == request.auth.uid);
+      allow delete: if false;
     }
 
     // Categorías votables. Id = "{year}_{slug}". Solo admins crean/editan.
@@ -24,9 +78,10 @@ service cloud.firestore {
     }
 
     // Votos. Id = "{year}_{categoryId}_{uid}" ⇒ un voto por usuario, categoría y año.
+    // Escribir exige cuenta aprobada (o admin). No hay comentarios: esta es la escritura de usuario.
     match /votes/{voteId} {
       allow read: if signedIn() && resource.data.uid == request.auth.uid;
-      allow create: if signedIn()
+      allow create: if isApproved()
         && request.resource.data.uid == request.auth.uid
         && voteId == string(request.resource.data.year) + '_' + request.resource.data.categoryId + '_' + request.auth.uid
         && get(/databases/$(database)/documents/categories/$(string(request.resource.data.year) + '_' + request.resource.data.categoryId)).data.open == true
@@ -36,11 +91,11 @@ service cloud.firestore {
     }
 
     // Conteos agregados públicos. Id = "{year}_{categoryId}". Solo +1 al nominado votado
-    // y solo dentro de la misma transacción que crea el voto del usuario.
+    // y solo dentro de la misma transacción que crea el voto del usuario aprobado.
     match /tallies/{tallyId} {
       function myVote() { return votePath(tallyId + '_' + request.auth.uid); }
       function newVoteNominee() { return getAfter(myVote()).data.nominee; }
-      function votingNow() { return signedIn() && !exists(myVote()) && existsAfter(myVote()); }
+      function votingNow() { return isApproved() && !exists(myVote()) && existsAfter(myVote()); }
       allow read: if true;
       allow create: if votingNow()
         && request.resource.data.counts.keys().hasOnly([newVoteNominee()])
@@ -51,13 +106,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Posts: lectura pública, solo admins escriben.
+    // Posts: lectura pública, solo admins escriben. contestYear opcional liga el post a un año de premios.
     match /posts/{postId} {
       allow read: if true;
       allow create: if isAdmin()
         && request.resource.data.authorUid == request.auth.uid
         && request.resource.data.title is string && request.resource.data.title.size() <= 140
-        && request.resource.data.body is string && request.resource.data.body.size() <= 20000;
+        && request.resource.data.body is string && request.resource.data.body.size() <= 20000
+        && (!('contestYear' in request.resource.data) || request.resource.data.contestYear == null || request.resource.data.contestYear is int);
       allow update, delete: if isAdmin();
     }
   }

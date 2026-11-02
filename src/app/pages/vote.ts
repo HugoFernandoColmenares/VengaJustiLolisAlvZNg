@@ -1,6 +1,7 @@
 import { Component, inject, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BACKEND, AlreadyVotedError } from '../core/backend/backend';
+import { httpsImageUrl } from '../core/data/image-optimize.data';
 import { environment } from '../../environments/environment';
 import { BarChart } from '../shared/bar-chart';
 
@@ -28,6 +29,7 @@ import { BarChart } from '../shared/bar-chart';
           <section class="card" [attr.aria-labelledby]="'c-' + c.id">
             <h2 class="card__head" [id]="'c-' + c.id">{{ c.title }}</h2>
             <div class="card__body">
+              @if (cover(c.image); as src) { <img class="cover" [src]="src" [alt]="'Portada de ' + c.title"> }
               <p>{{ c.description }}</p>
               @if (d.mine[c.id]; as voted) {
                 <p class="notice notice--ok">✅ Ya votaste por <strong>{{ voted }}</strong>.</p>
@@ -39,7 +41,7 @@ import { BarChart } from '../shared/bar-chart';
                   <legend class="sr-only">Elige tu nominado para {{ c.title }}</legend>
                   <div class="options">
                     @for (n of c.nominees; track n) {
-                      <label class="option"><input type="radio" [name]="c.id" [value]="n" (change)="pick(c.id, n)" [checked]="picked()[c.id] === n"><span>{{ n }}</span></label>
+                      <label class="option"><input type="radio" [name]="c.id" [value]="n" (change)="pick(c.id, n)" [checked]="picked()[c.id] === n">@if (photo(c.nomineeImages, n); as src) { <img [src]="src" alt="" width="48" height="48"> }<span>{{ n }}</span></label>
                     }
                   </div>
                   <button class="btn btn--yellow" type="button" [disabled]="!picked()[c.id]" (click)="vote(c.id)">Confirmar voto</button>
@@ -60,6 +62,8 @@ import { BarChart } from '../shared/bar-chart';
     .option { display: flex; align-items: center; gap: 1rem; border: var(--bw) solid #000; padding: 1rem 1.4rem; background: #fff; cursor: pointer; font-weight: 700; min-height: 4.8rem; }
     .option:has(input:checked) { background: var(--c-yellow); box-shadow: var(--sh-sm); transform: translate(-2px,-2px); }
     .option input { width: 2rem; height: 2rem; accent-color: #000; }
+    .option img { width: 4.8rem; height: 4.8rem; object-fit: cover; border: 2px solid #000; }
+    .cover { width: 100%; max-height: 24rem; object-fit: cover; border: var(--bw) solid #000; margin-bottom: 1.6rem; }
   `,
 })
 export class VotePage {
@@ -80,6 +84,10 @@ export class VotePage {
     },
   });
 
+  protected cover(url: string | null | undefined) { return httpsImageUrl(url); }
+  protected photo(images: { name: string; image: string }[] | undefined, name: string) {
+    return httpsImageUrl(images?.find(item => item.name === name)?.image);
+  }
   protected login() { this.backend.signIn().catch(e => this.message.set({ text: String(e?.message ?? e), error: true })); }
   protected pick(cat: string, n: string) { this.picked.update(p => ({ ...p, [cat]: n })); }
   protected async vote(cat: string) {

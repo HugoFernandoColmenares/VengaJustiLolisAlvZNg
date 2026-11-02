@@ -7,7 +7,8 @@
     "build": "ng build && node scripts/spa-404.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:dist": "node scripts/serve-dist.mjs"
+    "serve:dist": "node scripts/serve-dist.mjs",
+    "env:local": "node --env-file-if-exists=.env scripts/inject-firebase-env.mjs"
   },
   "private": true,
   "packageManager": "npm@11.19.1",

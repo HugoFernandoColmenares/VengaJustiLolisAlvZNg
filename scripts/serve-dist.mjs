@@ -1,8 +1,8 @@
-// Sirve el build bajo /VengaJustiLolisAlvZ/ igual que GitHub Pages (con fallback 404.html). Uso: npm run serve:dist
+// Sirve el build bajo /VengaJustiLolisAlvZNg/ igual que GitHub Pages (con fallback 404.html). Uso: npm run serve:dist
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
-const base = '/VengaJustiLolisAlvZ/', root = 'dist/vengajusti/browser', port = Number(process.env.PORT ?? 4300);
+const base = '/VengaJustiLolisAlvZNg/', root = 'dist/vengajusti/browser', port = Number(process.env.PORT ?? 4300);
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json', '.txt': 'text/plain' };
 createServer(async (req, res) => {
   const url = decodeURIComponent((req.url ?? '/').split('?')[0]);

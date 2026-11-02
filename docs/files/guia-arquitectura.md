@@ -8,7 +8,7 @@
 | Backend (BaaS) | Firebase: Firestore + Firebase Auth (Google), plan **Spark** (gratis) |
 | Modo sin credenciales | `LocalBackend` sobre `localStorage` |
 | Pruebas | Vitest (builder `@angular/build:unit-test`) |
-| Hosting | GitHub Pages en `/VengaJustiLolisAlvZ/` con GitHub Actions |
+| Hosting | GitHub Pages en `/VengaJustiLolisAlvZNg/` con GitHub Actions |
 | Node | 24 LTS (Angular 22 exige `^22.22.3 || ^24.15 || >=26`) |
 
 ## Estructura de carpetas
@@ -91,7 +91,7 @@ Probar las reglas: `npx firebase-tools emulators:start --only firestore` y apunt
 5. **Configuración del proyecto (⚙️) → Tus apps → Web (`</>`)** → apodo `vengajusti-web` → *no* marques Firebase Hosting → copia el objeto `firebaseConfig`.
 6. **No pegues la config en el repo.** Ve a GitHub → repo → **Settings → Secrets and variables → Actions → New repository secret** y crea: `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`. El workflow `deploy.yml` ejecuta `scripts/inject-firebase-env.mjs`, que escribe esos valores en `src/environments/environment.ts` **solo dentro del runner** antes de `npm run build`; el archivo del repo se queda con valores vacíos. Luego relanza el workflow (**Actions → Deploy a GitHub Pages → Run workflow**).
    - La `apiKey` web de Firebase **no es un secreto** (termina dentro del JS público): la seguridad la dan las reglas de Firestore y Auth. Se deja fuera del repo para no atarla al historial, poder rotarla sin commits y evitar alertas de escáneres. Restringe la key en **Google Cloud Console → APIs y servicios → Credenciales** a los referers `https://hugofernandocolmenares.github.io/*` y `http://localhost:*`.
-   - Para probar en tu PC: `FIREBASE_API_KEY=... FIREBASE_PROJECT_ID=... node scripts/inject-firebase-env.mjs && npm start`, y antes de commitear `git restore src/environments/environment.ts`.
+   - Para probar en tu PC: copia `.env.example` a `.env`, completa las variables y corre `npm run env:local && npm start`. Eso escribe `src/environments/environment.ts`; **no lo commitees con valores reales** (`git restore src/environments/environment.ts`).
    - **Nunca** subas archivos de *service account* (`*-firebase-adminsdk-*.json`, `serviceAccount*.json`) ni `.env*`: están en `.gitignore`. Esos sí son secretos.
 7. Despliega reglas e índices desde tu PC:
    ```bash
@@ -105,7 +105,7 @@ Probar las reglas: `npx firebase-tools emulators:start --only firestore` y apunt
 
 ## Flujo de despliegue
 1. `push` a `main` (o *Run workflow* manual) dispara `.github/workflows/deploy.yml`.
-2. Node 24 → `npm ci` → `npm test` → `npm run build` (= `ng build` con `baseHref /VengaJustiLolisAlvZ/` + `scripts/spa-404.mjs` que crea `404.html` y `.nojekyll`).
+2. Node 24 → `npm ci` → `npm test` → `npm run build` (= `ng build` con `baseHref /VengaJustiLolisAlvZNg/` + `scripts/spa-404.mjs` que crea `404.html` y `.nojekyll`).
 3. Se sube `dist/vengajusti/browser` como artefacto y `actions/deploy-pages` lo publica.
 4. **Una sola vez:** en GitHub → Settings → Pages → *Build and deployment* → **Source: GitHub Actions**.
 
@@ -117,5 +117,5 @@ npm ci
 npm start              # dev server en http://localhost:4200
 npm test -- --watch=false
 npm run build          # build de producción + 404.html
-npm run serve:dist     # sirve el build en http://localhost:4300/VengaJustiLolisAlvZ/
+npm run serve:dist     # sirve el build en http://localhost:4300/VengaJustiLolisAlvZNg/
 ```
